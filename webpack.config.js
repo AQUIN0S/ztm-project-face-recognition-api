@@ -1,8 +1,15 @@
 const path = require('path');
+const NodemonPlugin = require('nodemon-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const NodeExternals = require('webpack-node-externals');
 
 module.exports = {
     entry: './src/script.ts',
     devtool: 'inline-source-map',
+    plugins: [
+        new NodemonPlugin(),
+        new CleanWebpackPlugin()
+    ],
     module: {
         rules: [
             {
@@ -19,6 +26,8 @@ module.exports = {
     resolve: {
         extensions: ['.ts', '.tsx', '.js', '.jsx']
     },
+    target: "node",
+    externals: [NodeExternals()],
     mode: "development"
 };
 
