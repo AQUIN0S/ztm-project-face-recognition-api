@@ -6,7 +6,7 @@ const app = Express();
 const database = {
     users: [
         {
-            id: 123,
+            id: 1,
             name: 'John',
             email: 'john@gmail.com',
             password: 'cookies',
@@ -14,7 +14,7 @@ const database = {
             joined: new Date()
         },
         {
-            id: 124,
+            id: 5,
             name: 'Sally',
             email: 'sally@gmail.com',
             password: 'bananas',
@@ -22,6 +22,25 @@ const database = {
             joined: new Date()
         }
     ]
+}
+
+let newId = 1;
+
+const generateNewId = () => {
+    let uniqueId = true;
+
+    do {
+        if (database.users.some((value) => {
+            return value.id === newId;
+        })) {
+            uniqueId = false;
+            newId++;
+        } else {
+            uniqueId = true;
+        }
+    } while (!uniqueId);
+
+    return newId;
 }
 
 app.use(Express.json());
@@ -62,7 +81,7 @@ app.post('/signin', (req, res) => {
 app.post('/register', (req, res) => {
     const { email, name, password } = req.body;
     database.users.push({
-        id: 125,
+        id: generateNewId(),
         name: name,
         email: email,
         password: password,
