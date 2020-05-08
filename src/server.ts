@@ -1,5 +1,14 @@
-import Express from 'express';
+import Express, { Response } from 'express';
 import cors from 'cors';
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    password: string;
+    entries: number;
+    joined: Date;
+}
 
 const app = Express();
 
@@ -43,6 +52,32 @@ const generateNewId = () => {
     return newId;
 }
 
+const validEmail = (email: string) => {
+    if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+        return true;
+    }
+    return false;
+}
+
+const uniqueUser = (email: string) => {
+    const emailAlreadyExists = database.users.some(user =>  email === user.email);
+    return !emailAlreadyExists;
+}
+
+const sendUser = (res: Response, user: User | null) => {
+    if (user) {
+        res.status(200).json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            entries: user.entries,
+            joined: user.joined
+        });
+    } else {
+        res.status(400).send("Sorry, can't find user");
+    }
+}
+
 app.use(Express.json());
 app.use(cors());
 
@@ -72,23 +107,28 @@ app.post('/signin', (req, res) => {
     if (database.users.some((value) => {
         return req.body.email === value.email && req.body.password === value.password;
     })) {
-        res.json('success');
+        res.status(200).send();
     } else {
-        res.status(400).json('Error logging in');
+        res.status(400).send();
     }
 });
 
 app.post('/register', (req, res) => {
     const { email, name, password } = req.body;
-    database.users.push({
-        id: generateNewId(),
-        name: name,
-        email: email,
-        password: password,
-        entries: 0,
-        joined: new Date()
-    });
-    res.json(database.users[database.users.length - 1]);
+
+    if (validEmail(email) && uniqueUser(email) && name && password) {
+        database.users.push({
+            id: generateNewId(),
+            name: name,
+            email: email,
+            password: password,
+            entries: 0,
+            joined: new Date()
+        });
+        sendUser(res, database.users[database.users.length - 1]);
+    } else {
+        res.status(400).json("Email wasn't valid or other field(s) were empty!");
+    }
 });
 
 app.put('/image', (req, res) => {

@@ -4,7 +4,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const NodeExternals = require('webpack-node-externals');
 
 module.exports = {
-    entry: './src/script.ts',
+    entry: './src/server.ts',
     devtool: 'inline-source-map',
     plugins: [
         new NodemonPlugin(),
@@ -26,8 +26,10 @@ module.exports = {
     resolve: {
         extensions: ['.ts', '.tsx', '.js', '.jsx']
     },
-    target: "node",
-    externals: [NodeExternals()],
+    target: 'node',
+    externals: [
+        NodeExternals()
+    ],
     mode: "development"
 };
 
