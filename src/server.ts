@@ -1,13 +1,34 @@
 import Express, { Response } from 'express';
 import cors from 'cors';
+import knex from 'knex';
 
-interface User {
-    id: number;
-    name: string;
-    email: string;
-    password: string;
-    entries: number;
-    joined: Date;
+const db = knex({
+    client: 'pg',
+    connection: {
+        host: '127.0.0.1',
+        user: 'danny',
+        database: 'face-recognition'
+    }
+});
+
+const tableNames = {
+    users: "users",
+    login: "login"
+}
+
+const tableProps = {
+    users: {
+        id: `${tableNames.users}.id`,
+        name: `${tableNames.users}.name`,
+        email: `${tableNames.users}.email`,
+        entries: `${tableNames.users}.entries`,
+        joined: `${tableNames.users}.joined`
+    },
+    login: {
+        id: `${tableNames.login}.id`,
+        email: `${tableNames.login}.email`,
+        hash: `${tableNames.login}.hash`
+    }
 }
 
 const app = Express();
@@ -33,121 +54,127 @@ const database = {
     ]
 }
 
-let newId = 1;
-
-const generateNewId = () => {
-    let uniqueId = true;
-
-    do {
-        if (database.users.some((value) => {
-            return value.id === newId;
-        })) {
-            uniqueId = false;
-            newId++;
-        } else {
-            uniqueId = true;
-        }
-    } while (!uniqueId);
-
-    return newId;
-}
-
 const validEmail = (email: string) => {
     if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
         return true;
     }
     return false;
-}
+};
 
-const uniqueUser = (email: string) => {
-    const emailAlreadyExists = database.users.some(user =>  email === user.email);
-    return !emailAlreadyExists;
-}
+const userExists = async (identifier: string | number) => {
+    if (typeof identifier === 'string') {
+        const { exists } = await db.first(
+            db.raw(
+                'EXISTS ? as exists',
+                db.from(tableNames.users).select('id').where({email: identifier}).limit(1)
+            )
+        );
+        return exists;
+    } else if (typeof identifier === 'number') {
+        const { exists } = await db.first(
+            db.raw(
+                'EXISTS ? as exists',
+                db.from(tableNames.users).select('id').where({id: identifier}).limit(1)
+            )
+        );
+        return exists;
+    }
+};
 
-const sendUser = (res: Response, user: User | null) => {
+const sendUser = (res: Response, user: any) => {
     if (user) {
-        res.status(200).json({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            entries: user.entries,
-            joined: user.joined
-        });
+        res.status(200).json(user);
     } else {
         res.status(400).send("Sorry, can't find user");
     }
-}
+};
 
 app.use(Express.json());
 app.use(cors());
 
 app.get('/', (_req, res) => {
-    res.send(database.users);
+    db.select("*").from(tableNames.users).then(data => res.json(data));
 });
 
 app.get('/profile/:id', (req, res) => {
     const { id } = req.params;
-    let status = 404;
-    let response: object | string = "no such user";
 
-    database.users.some(user => {
-        if (user.id === Number(id)) {
-            response = user;
-            status = 200;
-            return true;
+    db.select("*").from(tableNames.users).where({ id: id }).then(user => {
+        if (user) {
+            res.status(200).json(user);
+        } else {
+            res.status(400).send();
         }
     });
-
-    res.status(status).json(response);
 });
 
-app.post('/signin', (req, res) => {
+app.post('/signin', async (req, res) => {
     console.log(req.body);
 
-    if (database.users.some((value) => {
-        return req.body.email === value.email && req.body.password === value.password;
-    })) {
-        res.status(200).send();
+    let { id, name, email, entries, joined } = tableProps.users;
+
+    const user = await db.select(id, name, email, entries, joined)
+        .from(tableNames.users)
+        .join(tableNames.login, tableProps.users.email, "=", tableProps.login.email)
+        .where({ [tableProps.users.email]: req.body.email, hash: req.body.password })
+        .first();
+    
+    if (user) {
+        res.status(200).json(user);
     } else {
         res.status(400).send();
     }
 });
 
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
     const { email, name, password } = req.body;
 
-    if (validEmail(email) && uniqueUser(email) && name && password) {
-        database.users.push({
-            id: generateNewId(),
-            name: name,
-            email: email,
-            password: password,
-            entries: 0,
-            joined: new Date()
-        });
-        sendUser(res, database.users[database.users.length - 1]);
+    if (validEmail(email) && !(await userExists(email)) && name && password) {
+        const newUser = (await db(tableNames.users)
+            .returning('*')
+            .insert({
+                email: email,
+                name: name,
+                joined: new Date()
+            }))[0];
+        console.log(newUser);
+        sendUser(res, newUser);
+        const newLogin = await db(tableNames.login)
+            .returning('*')
+            .insert({
+                email: email,
+                hash: password
+            });
+        console.log(newLogin);
     } else {
         res.status(400).json("Email wasn't valid or other field(s) were empty!");
     }
 });
 
-app.put('/image', (req, res) => {
-    const { id } = req.body;
-    let status = 404;
-    let response: number | string = "no such user";
+app.put('/image', async (req, res) => {
+    const id = req.body.id as number;
 
-    database.users.some(user => {
-        if (user.id === id) {
-            user.entries++;
-            response = user.entries;
-            status = 200;
-            return true;
-        }
-    });
+    const userEntries = 
+        await db.select(tableProps.users.entries, tableProps.users.id)
+            .from(tableNames.users)
+            .where({ [tableProps.users.id]: id })
+            .first();
 
-    res.status(status).json(response);
+    if (userEntries) {
+        let newEntries = Number(userEntries.entries) + 1;
+        console.log(newEntries);
+        const value = (await db(tableNames.users)
+            .update({ entries: newEntries })
+            .where({ id: Number(userEntries.id) })
+            .returning("entries"))[0];
+        
+        res.status(200).json(value);
+    } else {
+        res.status(404).send('No user found');
+    }
+    
 });
 
 app.listen(3000, () => {
-    console.log("App is running on port 3000");
+    console.log('\x1b[32m%s\x1b[0m', '[app] app is running on port 3000');
 });
