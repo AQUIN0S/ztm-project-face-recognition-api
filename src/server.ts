@@ -72,7 +72,8 @@ app.use(Express.json());
 app.use(cors());
 
 app.get('/', (_req, res) => {
-    db.select("*").from(tableNames.users).then(data => res.json(data));
+    // db.select("*").from(tableNames.users).then(data => res.json(data));
+    res.send("Hi there!");
 });
 
 app.get('/profile/:id', (req, res) => {
