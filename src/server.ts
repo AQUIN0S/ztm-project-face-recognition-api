@@ -89,7 +89,6 @@ app.get('/profile/:id', (req, res) => {
 });
 
 app.post('/signin', async (req, res) => {
-    console.log(req.body);
 
     let { id, name, email, entries, joined } = tableProps.users;
 
@@ -117,7 +116,6 @@ app.post('/register', async (req, res) => {
                 name: name,
                 joined: new Date()
             }))[0];
-        console.log(newUser);
         sendUser(res, newUser);
         const newLogin = await db(tableNames.login)
             .returning('*')
@@ -125,7 +123,6 @@ app.post('/register', async (req, res) => {
                 email: email,
                 hash: password
             });
-        console.log(newLogin);
     } else {
         res.status(400).json("Email wasn't valid or other field(s) were empty!");
     }
@@ -142,7 +139,6 @@ app.put('/image', async (req, res) => {
 
     if (userEntries) {
         let newEntries = Number(userEntries.entries) + 1;
-        console.log(newEntries);
         const value = (await db(tableNames.users)
             .update({ entries: newEntries })
             .where({ id: Number(userEntries.id) })
@@ -155,6 +151,8 @@ app.put('/image', async (req, res) => {
     
 });
 
-app.listen(process.env.PORT || 3000, () => {
-    console.log('\x1b[32m%s\x1b[0m', '[app] app is running on port 3000');
+const port = process.env.PORT || 3000
+
+app.listen(port, () => {
+    console.log('\x1b[32m%s\x1b[0m', `[app] app is running ${port === 3000 ? `on port ${port}` : `at ${port}`}`);
 });
