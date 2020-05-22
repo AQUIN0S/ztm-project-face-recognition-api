@@ -5,7 +5,7 @@ import knex from 'knex';
 const db = knex({
     client: 'pg',
     connection: {
-        connectString: process.env.DATABASE_URL || '127.0.0.1',
+        connectionString: process.env.DATABASE_URL || '127.0.0.1',
         ssl: {
             rejectUnauthorized: false
         }
