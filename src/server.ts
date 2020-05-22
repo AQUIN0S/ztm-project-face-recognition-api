@@ -5,9 +5,10 @@ import knex from 'knex';
 const db = knex({
     client: 'pg',
     connection: {
-        host: '127.0.0.1',
-        user: 'danny',
-        database: 'face-recognition'
+        host: process.env.DATABASE_URL || '127.0.0.1',
+        ssl: {
+            rejectUnauthorized: false
+        }
     }
 });
 
@@ -72,8 +73,7 @@ app.use(Express.json());
 app.use(cors());
 
 app.get('/', (_req, res) => {
-    // db.select("*").from(tableNames.users).then(data => res.json(data));
-    res.send("Hi there!");
+    db.select("*").from(tableNames.users).then(data => res.json(data));
 });
 
 app.get('/profile/:id', (req, res) => {
@@ -155,6 +155,6 @@ app.put('/image', async (req, res) => {
     
 });
 
-app.listen(process.env.PORT || 5000, () => {
+app.listen(process.env.PORT || 3000, () => {
     console.log('\x1b[32m%s\x1b[0m', '[app] app is running on port 3000');
 });
