@@ -154,6 +154,6 @@ app.put('/image', async (req, res) => {
     
 });
 
-app.listen(3000, () => {
+app.listen(process.env.PORT || 5000, () => {
     console.log('\x1b[32m%s\x1b[0m', '[app] app is running on port 3000');
 });
