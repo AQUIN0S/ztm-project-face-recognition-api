@@ -73,7 +73,7 @@ app.use(Express.json());
 app.use(cors());
 
 app.get('/', (_req, res) => {
-    db.select("*").from(tableNames.users).then(data => res.json(data)).catch(console.log);
+    db.select("*").from(tableNames.users).then(data => res.json(data)).catch(_err => res.send("Not connecting!"));
 });
 
 app.get('/profile/:id', (req, res) => {
